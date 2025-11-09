@@ -255,6 +255,110 @@ export class LandRegistryAPI {
       }
     };
   }
+
+  /**
+   * MOCK DATA GENERATOR
+   * Generates realistic parcel data for development/testing without deployed contract
+   */
+  generateMockParcels(count: number = 10000): Parcel[] {
+    const parcels: Parcel[] = [];
+    
+    for (let i = 0; i < count; i++) {
+      const x = i % 100;
+      const y = Math.floor(i / 100);
+      const zone = this.determineZoneFromCoords(x, y);
+      const random = this.seededRandom(i);
+      
+      // 30% for sale, 60% owned, 10% DAO/restricted
+      const randStatus = random();
+      let status: ParcelStatus;
+      let owner: Address | null = null;
+      
+      if (randStatus < 0.3) {
+        status = ParcelStatus.FOR_SALE;
+      } else if (randStatus < 0.9) {
+        status = ParcelStatus.OWNED;
+        owner = this.generateMockAddress(i);
+      } else {
+        status = ParcelStatus.DAO_OWNED;
+        owner = '0xDAODAODAODAODAODAODAODAODAODAODAODAO0' as Address;
+      }
+
+      const hasHouse = random() > 0.5;
+      const hasLicense = random() > 0.7;
+      const businessLicense = hasLicense 
+        ? (Math.floor(random() * 4) + 1) as LicenseType
+        : LicenseType.NONE;
+
+      parcels.push({
+        parcelId: i,
+        tokenId: i,
+        ownerAddress: owner,
+        worldId: 'VOID-1',
+        gridX: x,
+        gridY: y,
+        layerZ: 0,
+        zone,
+        zonePrice: this.getZonePrice(zone),
+        status,
+        listingPrice: status === ParcelStatus.FOR_SALE ? this.getZonePrice(zone) : undefined,
+        buildingId: `building-${i}`,
+        hasHouse,
+        businessLicense,
+        businessRevenue: hasLicense ? BigInt(Math.floor(random() * 10000)) : 0n,
+        metadata: {
+          rarity: this.getMockRarity(zone, x, y),
+          traits: this.getMockTraits(zone, x, y),
+          description: `Parcel #${i} in ${this.getZoneName(zone)}`,
+          image: undefined
+        }
+      });
+    }
+
+    return parcels;
+  }
+
+  private seededRandom(seed: number): () => number {
+    let s = seed;
+    return () => {
+      s = Math.sin(s) * 10000;
+      return s - Math.floor(s);
+    };
+  }
+
+  private generateMockAddress(seed: number): Address {
+    const hex = seed.toString(16).padStart(40, '0');
+    return `0x${hex}` as Address;
+  }
+
+  private determineZoneFromCoords(x: number, y: number): ZoneType {
+    const centerX = 50;
+    const centerY = 50;
+    const distance = Math.sqrt(Math.pow(x - centerX, 2) + Math.pow(y - centerY, 2));
+
+    if (distance < 10) return ZoneType.PREMIUM;
+    if (distance < 20) return ZoneType.COMMERCIAL;
+    if (distance < 35) return ZoneType.RESIDENTIAL;
+    if (distance < 50) return ZoneType.PUBLIC;
+    return ZoneType.GLIZZY_WORLD;
+  }
+
+  private getMockRarity(zone: ZoneType, x: number, y: number): string {
+    const distance = Math.sqrt(Math.pow(x - 50, 2) + Math.pow(y - 50, 2));
+    if (zone === ZoneType.PREMIUM || distance < 5) return 'legendary';
+    if (zone === ZoneType.COMMERCIAL || distance < 15) return 'rare';
+    if (distance < 30) return 'uncommon';
+    return 'common';
+  }
+
+  private getMockTraits(zone: ZoneType, x: number, y: number): string[] {
+    const traits: string[] = [];
+    if (x === 0 || x === 99 || y === 0 || y === 99) traits.push('edge-lot');
+    if (x % 10 === 0 || y % 10 === 0) traits.push('main-avenue');
+    if (x === 50 && y === 50) traits.push('center-plaza');
+    if (zone === ZoneType.PREMIUM) traits.push('premium-zone');
+    return traits;
+  }
 }
 
 export const landRegistryAPI = new LandRegistryAPI();

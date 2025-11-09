@@ -8,12 +8,15 @@ import { Address } from 'viem';
 
 // ========== CONTRACT ADDRESSES ==========
 
+// DEVELOPMENT MODE: Set to true to use mock data instead of blockchain
+export const USE_MOCK_DATA = true;
+
 export const CONTRACTS = {
-  // Main Contracts
-  LAND_REGISTRY: '0x0000000000000000000000000000000000000000' as Address, // TODO: Deploy and update
-  VOID_TOKEN: '0x0000000000000000000000000000000000000000' as Address,    // TODO: Update
-  PSX_TOKEN: '0x0000000000000000000000000000000000000000' as Address,     // TODO: Update
-  HOOK_ROUTER: '0x0000000000000000000000000000000000000000' as Address,   // V4 Hooks
+  // Main Contracts - TODO: Update these when contracts are deployed
+  LAND_REGISTRY: '0x0000000000000000000000000000000000000000' as Address, // Deploy LandRegistry.sol first
+  VOID_TOKEN: '0x0000000000000000000000000000000000000000' as Address,
+  PSX_TOKEN: '0x0000000000000000000000000000000000000000' as Address,
+  HOOK_ROUTER: '0x0000000000000000000000000000000000000000' as Address,
   
   // Future Contracts
   MARKETPLACE: '0x0000000000000000000000000000000000000000' as Address,

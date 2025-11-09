@@ -1,19 +1,58 @@
 /**
  * Land System React Hooks
  * Wagmi hooks for interacting with LandRegistry contract
+ * Falls back to mock data when USE_MOCK_DATA is true
  */
 
 import { useAccount, useReadContract, useWriteContract, useWaitForTransactionReceipt, useReadContracts } from 'wagmi';
 import { Address, parseEther } from 'viem';
-import { CONTRACTS, LAND_REGISTRY_ABI } from './contracts';
+import { CONTRACTS, LAND_REGISTRY_ABI, USE_MOCK_DATA } from './contracts';
 import { Parcel, LicenseType, ParcelStatus } from './types';
 import { landRegistryAPI } from './registry-api';
-import { useMemo, useCallback, useState } from 'react';
+import { useMemo, useCallback, useState, useEffect } from 'react';
+
+// Global mock data cache
+let mockParcelCache: Parcel[] | null = null;
+
+/**
+ * Get or initialize mock parcel data
+ */
+function getMockParcels(): Parcel[] {
+  if (!mockParcelCache) {
+    console.log('[Land System] Generating 10,000 mock parcels...');
+    mockParcelCache = landRegistryAPI.generateMockParcels(10000);
+    console.log('[Land System] Mock parcels ready!');
+  }
+  return mockParcelCache;
+}
 
 /**
  * Get details for a single parcel
  */
 export function useParcelDetails(parcelId: number | undefined) {
+  // Use mock data if enabled
+  if (USE_MOCK_DATA) {
+    const [parcel, setParcel] = useState<Parcel | null>(null);
+    const [isLoading, setIsLoading] = useState(true);
+
+    useEffect(() => {
+      if (parcelId !== undefined) {
+        const mockParcels = getMockParcels();
+        const foundParcel = mockParcels[parcelId] || null;
+        setParcel(foundParcel);
+        setIsLoading(false);
+      }
+    }, [parcelId]);
+
+    return {
+      parcel,
+      isLoading,
+      error: null,
+      refetch: () => {}
+    };
+  }
+
+  // Original blockchain code
   const { data, isLoading, error, refetch } = useReadContract({
     address: CONTRACTS.LAND_REGISTRY as Address,
     abi: LAND_REGISTRY_ABI,
@@ -152,6 +191,44 @@ export function useAllParcels() {
  * Paginated parcels reader to avoid loading 10k at once
  */
 export function useParcelsPage(page: number, pageSize: number) {
+  // Use mock data if enabled
+  if (USE_MOCK_DATA) {
+    const [parcels, setParcels] = useState<Parcel[]>([]);
+    const [isLoading, setIsLoading] = useState(true);
+
+    useEffect(() => {
+      setIsLoading(true);
+      const mockParcels = getMockParcels();
+      const totalParcels = mockParcels.length;
+      const clampedPageSize = Math.max(1, Math.min(pageSize, 1000));
+      const maxPage = Math.max(1, Math.ceil(totalParcels / clampedPageSize));
+      const safePage = Math.max(1, Math.min(page, maxPage));
+      const start = (safePage - 1) * clampedPageSize;
+      const end = Math.min(start + clampedPageSize, totalParcels);
+
+      const pageParcels = mockParcels.slice(start, end);
+      setParcels(pageParcels);
+      setIsLoading(false);
+    }, [page, pageSize]);
+
+    const mockParcels = getMockParcels();
+    const totalParcels = mockParcels.length;
+    const clampedPageSize = Math.max(1, Math.min(pageSize, 1000));
+    const maxPage = Math.max(1, Math.ceil(totalParcels / clampedPageSize));
+
+    return {
+      parcels,
+      isLoading,
+      error: null,
+      refetch: () => {},
+      page,
+      pageSize: clampedPageSize,
+      totalParcels,
+      totalPages: maxPage
+    };
+  }
+
+  // Original blockchain code
   const { data: gridSizeData } = useReadContract({
     address: CONTRACTS.LAND_REGISTRY as Address,
     abi: LAND_REGISTRY_ABI,
