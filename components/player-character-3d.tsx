@@ -10,7 +10,7 @@ interface PlayerCharacter3DProps {
   position: { x: number; y: number; z: number }
   onMove: (pos: { x: number; y: number; z: number }) => void
   onRotationChange?: (rotationY: number) => void
-  onCameraAngleChange?: (angle: "standard" | "wide") => void
+  onCameraAngleChange?: (angle: "close" | "medium" | "far") => void
   controlsEnabled?: boolean
   mobileMovement?: { x: number; z: number }
   mobileSprinting?: boolean
@@ -18,11 +18,12 @@ interface PlayerCharacter3DProps {
 }
 
 type AnimState = "idle" | "walking" | "running"
-type CameraAngle = "standard" | "wide"
+type CameraAngle = "close" | "medium" | "far"
 
 const CAMERA_CONFIGS = {
-  standard: { distance: 8, height: 3, sideOffset: 1.5 },
-  wide: { distance: 12, height: 4, sideOffset: 2 },
+  close: { distance: 5, height: 2, sideOffset: 1 },
+  medium: { distance: 8, height: 3, sideOffset: 1.5 },
+  far: { distance: 12, height: 4, sideOffset: 2 },
 }
 
 function clampToWorld(pos: { x: number; z: number }) {
@@ -208,7 +209,7 @@ export function PlayerCharacter3D({
   const groupRef = useRef<THREE.Group>(null)
   const shadowRef = useRef<THREE.Mesh>(null)
 
-  const [cameraAngle, setCameraAngle] = useState<CameraAngle>("standard")
+  const [cameraAngle, setCameraAngle] = useState<CameraAngle>("medium")
 
   const keys = useRef({
     w: false,
@@ -246,8 +247,8 @@ export function PlayerCharacter3D({
       if (key === "v") {
         e.preventDefault()
         setCameraAngle((prev) => {
-          const next = prev === "standard" ? "wide" : "standard"
-          onCameraAngleChange?.(next as any)
+          const next = prev === "close" ? "medium" : prev === "medium" ? "far" : "close"
+          onCameraAngleChange?.(next)
           return next
         })
       }

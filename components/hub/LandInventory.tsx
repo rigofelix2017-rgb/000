@@ -29,8 +29,7 @@ export function LandInventory({ walletAddress, onViewOnMap, onManageParcel }: La
     if (searchQuery) {
       data = data.filter(
         (p) =>
-          p.building.id.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          p.building.district?.toLowerCase().includes(searchQuery.toLowerCase()),
+          p.building.id.toLowerCase().includes(searchQuery.toLowerCase())
       )
     }
 

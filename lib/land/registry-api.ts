@@ -4,7 +4,7 @@
  */
 
 import { Address, parseEther } from 'viem';
-import { Parcel, ZoneType, ParcelStatus, LicenseType } from './types';
+import { Parcel, ZoneType, ParcelStatus, LicenseType, TierType, DistrictType } from './types';
 import { CONTRACTS } from './contracts';
 
 export class LandRegistryAPI {
@@ -81,28 +81,104 @@ export class LandRegistryAPI {
       status = ParcelStatus.OWNED;
     }
 
+    const tier = this.calculateTier(x, y);
+    const district = this.calculateDistrict(x, y);
+    const basePrice = this.calculateBasePrice(tier, district, x, y);
+    
     return {
-      parcelId,
+      parcelId: String(parcelId),
       tokenId: parcelId,
-      ownerAddress: owner === '0x0000000000000000000000000000000000000000' ? null : owner,
-      worldId: 'VOID-1',
+      gridIndex: y * 40 + x,
+      worldId: 'VOID',
+      regionId: 'VOID-GENESIS',
       gridX: x,
       gridY: y,
       layerZ: 0,
+      tier,
+      district,
       zone: zone as ZoneType,
-      zonePrice: this.getZonePrice(zone as ZoneType),
+      owner: owner === '0x0000000000000000000000000000000000000000' ? null : owner,
       status,
-      buildingId: `building-${parcelId}`,
+      isFounderPlot: false,
+      isCornerLot: (x === 0 || x === 39) && (y === 0 || y === 39),
+      isMainStreet: x === 20 || y === 20,
+      basePrice,
+      currentPrice: status === ParcelStatus.FOR_SALE ? basePrice : 0n,
+      lastSalePrice: 0n,
+      listedForSale: status === ParcelStatus.FOR_SALE,
+      salePrice: status === ParcelStatus.FOR_SALE ? basePrice : null,
+      building: null,
+      maxBuildingHeight: tier === TierType.CORE ? 10 : tier === TierType.RING ? 7 : 5,
       hasHouse,
       businessLicense: businessLicense as LicenseType,
       businessRevenue,
+      ownershipHistory: owner && owner !== '0x0000000000000000000000000000000000000000' ? [owner] : [],
+      acquiredAt: owner && owner !== '0x0000000000000000000000000000000000000000' ? new Date() : null,
+      createdAt: new Date(),
+      updatedAt: new Date(),
       metadata: {
         rarity: 'common',
         traits: [],
-        description: `Parcel #${parcelId} in VOID-1`,
+        description: `Parcel #${parcelId} in VOID-GENESIS`,
         image: undefined
       }
     };
+  }
+
+  /**
+   * Calculate tier based on distance from center
+   */
+  private calculateTier(x: number, y: number): TierType {
+    const centerX = 19.5;
+    const centerY = 19.5;
+    const distance = Math.sqrt(Math.pow(x - centerX, 2) + Math.pow(y - centerY, 2));
+    
+    if (distance <= 6) return TierType.CORE;
+    if (distance <= 12) return TierType.RING;
+    return TierType.FRONTIER;
+  }
+
+  /**
+   * Calculate district based on grid position
+   */
+  private calculateDistrict(x: number, y: number): DistrictType {
+    // Top-left quadrant
+    if (x < 20 && y < 20) return DistrictType.GAMING;
+    // Top-right quadrant
+    if (x >= 20 && y < 20) return DistrictType.BUSINESS;
+    // Bottom-left quadrant
+    if (x < 20 && y >= 20) return DistrictType.SOCIAL;
+    // Bottom-right quadrant  
+    return DistrictType.DEFI;
+  }
+
+  /**
+   * Calculate base price with tier, district, and scarcity multipliers
+   */
+  private calculateBasePrice(tier: TierType, district: DistrictType, x: number, y: number): bigint {
+    const BASE_LAND_PRICE = parseEther('100');
+    
+    // Tier multipliers
+    const tierMultiplier = tier === TierType.CORE ? 3 : tier === TierType.RING ? 2 : 1;
+    
+    // District multipliers
+    const districtMultipliers: Record<DistrictType, number> = {
+      [DistrictType.GAMING]: 1.5,
+      [DistrictType.BUSINESS]: 1.3,
+      [DistrictType.SOCIAL]: 1.2,
+      [DistrictType.DEFI]: 1.8,
+      [DistrictType.RESIDENTIAL]: 1.0,
+      [DistrictType.DAO]: 2.0,
+      [DistrictType.PUBLIC]: 0.8
+    };
+    
+    // Scarcity bonuses
+    const isCorner = (x === 0 || x === 39) && (y === 0 || y === 39);
+    const isMainStreet = x === 20 || y === 20;
+    const scarcityMultiplier = isCorner ? 1.2 : isMainStreet ? 1.15 : 1.0;
+    
+    const totalMultiplier = tierMultiplier * (districtMultipliers[district] || 1.0) * scarcityMultiplier;
+    return BASE_LAND_PRICE * BigInt(Math.floor(totalMultiplier * 100)) / 100n;
   }
 
   /**

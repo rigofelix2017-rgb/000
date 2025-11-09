@@ -92,7 +92,7 @@ export function PropertyMiniMap({ property, selectedPropertyId, onClick }: Prope
 
       {/* District label */}
       <div className="absolute top-2 left-2 bg-black/70 px-2 py-1 rounded text-xs font-bold text-white">
-        {property.district || "VOID City"}
+        VOID City
       </div>
     </div>
   )

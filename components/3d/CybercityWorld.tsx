@@ -229,7 +229,7 @@ function ParcelBuilding({ parcel, isSelected }: { parcel: Parcel; isSelected: bo
         <group>
           <mesh position={[0, buildingHeight + 5, 0]}>
             <cylinderGeometry args={[3, 3, 0.5, 32]} />
-            <meshBasicMaterial color="#ff00ff" emissive="#ff00ff" emissiveIntensity={1.5} />
+            <meshStandardMaterial color="#ff00ff" emissive="#ff00ff" emissiveIntensity={1.5} />
           </mesh>
           <Text
             position={[0, buildingHeight + 5.5, 0]}

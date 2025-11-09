@@ -7,6 +7,9 @@
 
 import { Address } from 'viem';
 
+// Re-export Address type for other files
+export type { Address };
+
 // ========== ENUMS ==========
 
 export enum ZoneType {

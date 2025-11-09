@@ -187,6 +187,17 @@ export default function VOIDMetaverse() {
     }
   }, [introComplete])
 
+  // Expose global reset function for console access
+  useEffect(() => {
+    (window as any).resetIntro = () => {
+      localStorage.removeItem("void_intro_seen")
+      setIntroComplete(false)
+      setGameStarted(false)
+      console.log("🔄 Intro reset! Refresh the page to see the intro sequence again.")
+    }
+    console.log("💡 TIP: Type resetIntro() in console to restart intro sequence")
+  }, [])
+
   useEffect(() => {
     const handleOpenProximityChat = () => setProximityChatOpen(true)
     const handleOpenGlobalChat = () => setGlobalChatExpanded(true)
@@ -349,6 +360,15 @@ export default function VOIDMetaverse() {
         e.preventDefault()
         setVoidHubOpen(!voidHubOpen)
         setFriendSystemOpen(false)
+      }
+
+      // RESET INTRO: Shift+R to clear intro and see it again
+      if ((e.key === "r" || e.key === "R") && e.shiftKey) {
+        e.preventDefault()
+        localStorage.removeItem("void_intro_seen")
+        setIntroComplete(false)
+        setGameStarted(false)
+        console.log("🔄 Intro reset! Refresh page to see intro sequence again.")
       }
     }
 
@@ -1081,6 +1101,18 @@ export default function VOIDMetaverse() {
               className="w-full text-left px-4 py-3 bg-black/50 border-2 border-cyan-500/30 hover:border-cyan-500 rounded text-white font-mono transition-colors"
             >
               <span className="text-cyan-400">C</span> - CRT Effect: {crtEnabled ? 'ON' : 'OFF'}
+            </button>
+            
+            <button
+              onClick={() => { 
+                localStorage.removeItem("void_intro_seen");
+                setIntroComplete(false);
+                setGameStarted(false);
+                setBladeNavOpen(false);
+              }}
+              className="w-full text-left px-4 py-3 mt-2 bg-black/50 border-2 border-red-500/30 hover:border-red-500 rounded text-white font-mono transition-colors"
+            >
+              <span className="text-red-400">SHIFT+R</span> - Reset Intro
             </button>
           </div>
         </div>

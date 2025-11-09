@@ -45,7 +45,9 @@ export function Scene3D({
   useEffect(() => {
     camera.near = 0.1
     camera.far = 500
-    camera.fov = 65
+    if ('fov' in camera) {
+      camera.fov = 65
+    }
     camera.updateProjectionMatrix()
 
     scene.background = new THREE.Color(0x030712)
@@ -112,7 +114,7 @@ export function Scene3D({
 
       <DistrictBoundaries highlightedDistrictId={currentDistrictId} />
 
-      <CybercityWorld selectedParcelId={null} />
+      <CybercityWorld selectedParcelId={undefined} />
 
       <PlayerCharacter3D
         position={playerPosition}
