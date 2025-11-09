@@ -49,9 +49,6 @@ export function CybercityWorld({ selectedParcelId }: { selectedParcelId?: string
   )
 }
 
-  );
-}
-
 // Windows component for new land system buildings
 function WindowsNew({ buildingHeight }: { buildingHeight: number }) {
   const windowRows = Math.floor(buildingHeight / 5);

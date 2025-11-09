@@ -13,7 +13,12 @@ import { formatEther } from 'viem';
 
 type ViewMode = 'table' | 'grid' | 'map';
 
-export function GlobalLandInventory() {
+interface GlobalLandInventoryProps {
+  isOpen?: boolean;
+  onClose?: () => void;
+}
+
+export function GlobalLandInventory({ isOpen = true, onClose }: GlobalLandInventoryProps = {}) {
   const [viewMode, setViewMode] = useState<ViewMode>('table');
   const [selectedParcel, setSelectedParcel] = useState<Parcel | null>(null);
   
@@ -25,6 +30,10 @@ export function GlobalLandInventory() {
   const { parcelIds: myParcelIds } = useMyParcels();
   
   const { filters, setFilters, filteredParcels, statistics } = useParcelFilters(parcels);
+
+  if (!isOpen) {
+    return null;
+  }
 
   if (isLoading) {
     return (
@@ -49,12 +58,24 @@ export function GlobalLandInventory() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-slate-950 via-slate-900 to-slate-950 text-white">
+    <div className="fixed inset-0 z-50 bg-gradient-to-b from-slate-950 via-slate-900 to-slate-950 text-white overflow-auto">
       {/* Header */}
       <div className="border-b border-cyan-500/30 bg-slate-900/50 backdrop-blur-sm sticky top-0 z-10">
         <div className="container mx-auto px-4 py-6">
-          <h1 className="text-4xl font-bold text-cyan-400 mb-2">Land Registry</h1>
-          <p className="text-cyan-300/70">Browse all 10,000 parcels in VOID-1</p>
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-4xl font-bold text-cyan-400 mb-2">Land Registry</h1>
+              <p className="text-cyan-300/70">Browse all 10,000 parcels in VOID-1</p>
+            </div>
+            {onClose && (
+              <button
+                onClick={onClose}
+                className="px-4 py-2 bg-red-500/20 hover:bg-red-500/30 border border-red-500/50 rounded text-red-300 hover:text-red-200 transition-colors"
+              >
+                Close [ESC]
+              </button>
+            )}
+          </div>
         </div>
       </div>
 

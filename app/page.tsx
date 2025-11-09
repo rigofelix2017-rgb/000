@@ -10,7 +10,7 @@ import { InteriorSpace } from "@/components/interior-space"
 import { StartScreen } from "@/components/StartScreen"
 import { CyberpunkCityMap } from "@/components/cyberpunk-city-map"
 import { PropertyMarketplace } from "@/components/PropertyMarketplace"
-import { GlobalInventory } from "@/components/land/global-inventory"
+import { GlobalLandInventory } from "@/components/land/global-inventory"
 import { GlobalChat } from "@/components/GlobalChat"
 import { ActionBar } from "@/components/action-bar"
 import { FriendSystem } from "@/components/friend-system"
@@ -765,7 +765,7 @@ export default function VOIDMetaverse() {
               )}
 
               {landInventoryOpen && (
-                <GlobalInventory
+                <GlobalLandInventory
                   isOpen={landInventoryOpen}
                   onClose={() => setLandInventoryOpen(false)}
                 />
