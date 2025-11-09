@@ -19,8 +19,8 @@ let mockParcelCache: Parcel[] | null = null;
  */
 function getMockParcels(): Parcel[] {
   if (!mockParcelCache) {
-    console.log('[Land System] Generating 10,000 mock parcels...');
-    mockParcelCache = landRegistryAPI.generateMockParcels(10000);
+    console.log('[Land System] Generating 1,600 mock parcels (40×40 genesis grid)...');
+    mockParcelCache = landRegistryAPI.generateMockParcels(1600);
     console.log('[Land System] Mock parcels ready!');
   }
   return mockParcelCache;

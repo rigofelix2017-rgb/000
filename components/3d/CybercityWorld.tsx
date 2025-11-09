@@ -61,7 +61,7 @@ function WindowsNew({ buildingHeight }: { buildingHeight: number }) {
     windows.push(
       <mesh key={`front-${i}`} position={[0, y, PARCEL_SIZE * 0.46]}>
         <planeGeometry args={[PARCEL_SIZE * 0.8, 4]} />
-        <meshBasicMaterial color="#60a5fa" emissive="#60a5fa" emissiveIntensity={0.5} transparent opacity={0.6} />
+        <meshStandardMaterial color="#60a5fa" emissive="#60a5fa" emissiveIntensity={0.5} transparent opacity={0.6} />
       </mesh>
     );
     
@@ -69,7 +69,7 @@ function WindowsNew({ buildingHeight }: { buildingHeight: number }) {
     windows.push(
       <mesh key={`back-${i}`} position={[0, y, -PARCEL_SIZE * 0.46]} rotation={[0, Math.PI, 0]}>
         <planeGeometry args={[PARCEL_SIZE * 0.8, 4]} />
-        <meshBasicMaterial color="#60a5fa" emissive="#60a5fa" emissiveIntensity={0.5} transparent opacity={0.6} />
+        <meshStandardMaterial color="#60a5fa" emissive="#60a5fa" emissiveIntensity={0.5} transparent opacity={0.6} />
       </mesh>
     );
   }
@@ -81,24 +81,27 @@ function ParcelBuilding({ parcel, isSelected }: { parcel: Parcel; isSelected: bo
   const meshRef = useRef<THREE.Mesh>(null);
   const markerRef = useRef<THREE.Mesh>(null);
 
-  // Calculate world position
+  // Calculate world position (string parcelId now supported)
   const worldPos = landRegistryAPI.getWorldPosition(parcel.parcelId);
   
-  // Calculate building height based on zone and distance from center
-  const distance = landRegistryAPI.getDistanceFromCenter(parcel.gridX, parcel.gridY);
+  // Calculate building height based on TIER (not zone)
+  // CORE tier: 60-120 floors (tallest)
+  // RING tier: 30-60 floors
+  // FRONTIER tier: 15-40 floors
   let buildingHeight = 20; // Default
   
-  // Premium zone = tallest buildings (50-100 units)
-  if (parcel.zone === 3) buildingHeight = 50 + Math.random() * 50;
-  // Commercial = tall (30-60 units)
-  else if (parcel.zone === 2) buildingHeight = 30 + Math.random() * 30;
-  // Residential = medium (20-40 units)
-  else if (parcel.zone === 1) buildingHeight = 20 + Math.random() * 20;
-  // Public = low (10-25 units)
-  else buildingHeight = 10 + Math.random() * 15;
+  if (parcel.tier === 'CORE') {
+    buildingHeight = 60 + Math.random() * 60; // 60-120 units
+  } else if (parcel.tier === 'RING') {
+    buildingHeight = 30 + Math.random() * 30; // 30-60 units
+  } else { // FRONTIER
+    buildingHeight = 15 + Math.random() * 25; // 15-40 units
+  }
 
-  // Taller in the center
-  if (distance < 20) buildingHeight *= 1.5;
+  // DAO Plaza gets special treatment (ultra tall)
+  if (parcel.district === 'DAO') {
+    buildingHeight = 80 + Math.random() * 40; // 80-120 units
+  }
 
   // Animate FOR_SALE marker
   useFrame((state) => {
@@ -107,15 +110,17 @@ function ParcelBuilding({ parcel, isSelected }: { parcel: Parcel; isSelected: bo
     }
   });
 
-  // Get building color based on zone
+  // Get building color based on DISTRICT (not zone)
   const getBuildingColor = (): string => {
-    switch (parcel.zone) {
-      case 0: return "#4a5568"; // Public - Gray
-      case 1: return "#3b82f6"; // Residential - Blue
-      case 2: return "#f59e0b"; // Commercial - Amber
-      case 3: return "#8b5cf6"; // Premium - Purple
-      case 4: return "#ec4899"; // Glizzy World - Pink
-      default: return "#6b7280";
+    switch (parcel.district) {
+      case 'GAMING': return "#ef4444";      // Red - Gaming District
+      case 'BUSINESS': return "#3b82f6";    // Blue - Business District
+      case 'SOCIAL': return "#ec4899";      // Pink - Social District
+      case 'DEFI': return "#10b981";        // Green - DeFi District
+      case 'RESIDENTIAL': return "#8b5cf6"; // Violet - Residential
+      case 'DAO': return "#9333ea";         // Purple - DAO Plaza
+      case 'PUBLIC': return "#6b7280";      // Gray - Public spaces
+      default: return "#4a5568";
     }
   };
 
@@ -129,7 +134,16 @@ function ParcelBuilding({ parcel, isSelected }: { parcel: Parcel; isSelected: bo
 
   const buildingColor = getBuildingColor();
   const ownershipColor = getOwnershipColor();
-  const hasNeon = parcel.zone === 2 || parcel.zone === 4; // Commercial and Glizzy World
+  // Gaming, Business, and Social districts have neon
+  const hasNeon = parcel.district === 'GAMING' || parcel.district === 'BUSINESS' || parcel.district === 'SOCIAL';
+  
+  // Chrome/metallic for CORE tier, concrete for FRONTIER
+  const isChromeBuilding = parcel.tier === 'CORE' && (parcel.district === 'BUSINESS' || parcel.district === 'DEFI');
+  const metalness = isChromeBuilding ? 0.9 : 0.3;
+  const roughness = isChromeBuilding ? 0.1 : 0.7;
+  
+  // Tall buildings get rooftop features
+  const hasTallBuilding = buildingHeight > 60;
 
   return (
     <group position={[worldPos.x, 0, worldPos.z]}>
@@ -138,12 +152,20 @@ function ParcelBuilding({ parcel, isSelected }: { parcel: Parcel; isSelected: bo
         <boxGeometry args={[PARCEL_SIZE * 0.9, buildingHeight, PARCEL_SIZE * 0.9]} />
         <meshStandardMaterial
           color={buildingColor}
-          roughness={0.7}
-          metalness={0.3}
+          roughness={roughness}
+          metalness={metalness}
           emissive={hasNeon ? buildingColor : "#000000"}
-          emissiveIntensity={hasNeon ? 0.2 : 0}
+          emissiveIntensity={hasNeon ? 0.3 : 0}
         />
       </mesh>
+      
+      {/* Rooftop Helipad (for tall CORE buildings) */}
+      {hasTallBuilding && parcel.tier === 'CORE' && (
+        <mesh position={[0, buildingHeight + 1, 0]}>
+          <cylinderGeometry args={[4, 4, 0.5, 16]} />
+          <meshStandardMaterial color="#1a1a1a" metalness={0.8} roughness={0.2} />
+        </mesh>
+      )}
 
       {/* Windows */}
       <WindowsNew buildingHeight={buildingHeight} />
@@ -182,12 +204,12 @@ function ParcelBuilding({ parcel, isSelected }: { parcel: Parcel; isSelected: bo
       )}
 
       {/* OWNED Badge */}
-      {parcel.status === ParcelStatus.OWNED && parcel.ownerAddress && (
+      {parcel.status === ParcelStatus.OWNED && parcel.owner && (
         <group>
           {/* Top beam */}
           <mesh position={[0, buildingHeight + 2, 0]}>
             <cylinderGeometry args={[0.3, 0.3, 4, 16]} />
-            <meshBasicMaterial color="#00ff88" emissive="#00ff88" emissiveIntensity={1} transparent opacity={0.6} />
+            <meshStandardMaterial color="#00ff88" emissive="#00ff88" emissiveIntensity={1} transparent opacity={0.6} />
           </mesh>
           {/* Owner badge */}
           <Text
