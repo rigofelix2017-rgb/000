@@ -18,10 +18,10 @@ export function parcelToParcelData(parcel: Parcel): ParcelData {
     worldX: parcel.gridX * 16, // Convert grid to world coords
     worldZ: parcel.gridY * 16,
     districtId: ZoneType[parcel.zone].toLowerCase(),
-    owner: parcel.ownerAddress || null,
+    owner: parcel.owner || null,
     status: parcel.status as any, // Status enums are compatible
     type: ZoneType[parcel.zone] as any, // Zone types map to type
-    price: Number(parcel.zonePrice),
+    price: Number(parcel.basePrice),
     metadata: {
       buildingStyle: parcel.metadata?.rarity || "modern",
       height: 0, // Will be set from Building
@@ -57,11 +57,11 @@ export function buildingToPropertyListing(
       },
       type: building.archetype.toLowerCase() as any,
       style: building.archetype,
-      price: Number(parcel.zonePrice),
+      price: Number(parcel.basePrice),
     } as any,
     isOwned,
-    owner: parcel.ownerAddress || undefined,
-    listingPrice: Number(parcel.listingPrice || parcel.zonePrice),
+    owner: parcel.owner || undefined,
+    listingPrice: Number(parcel.salePrice || parcel.basePrice),
     appreciation: 0,
     monthlyIncome: parcel.businessRevenue ? Number(parcel.businessRevenue) / 30 : undefined,
   }
