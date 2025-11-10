@@ -20,6 +20,7 @@ import { DirectMessage } from "@/components/direct-message"
 import { UserProfileSetup } from "@/components/user-profile-setup"
 import { UserProfileEdit } from "@/components/user-profile-edit"
 import { CreatePleadSystem } from "@/components/create-plead-system"
+import { PhotosensitivityWarning } from "@/components/PhotosensitivityWarning"
 import { WelcomeScreen } from "@/components/WelcomeScreen"
 import { CRTOverlay } from "@/components/ui/crt-overlay"
 import { XboxBladeNav } from "@/components/ui/xbox-blade-nav"
@@ -74,6 +75,7 @@ export default function VOIDMetaverse() {
   const [profileEditOpen, setProfileEditOpen] = useState(false)
   const [createPleadOpen, setCreatePleadOpen] = useState(false)
   const [cameraAngle, setCameraAngle] = useState<"close" | "medium" | "far">("medium")
+  const [warningAccepted, setWarningAccepted] = useState<boolean | null>(null)
   const [introComplete, setIntroComplete] = useState<boolean | null>(null)
   const [hudMode, setHudMode] = useState<"lite" | "full">("full")
   const [mobileMovement, setMobileMovement] = useState({ x: 0, z: 0 })
@@ -187,13 +189,25 @@ export default function VOIDMetaverse() {
     }
   }, [introComplete])
 
+  // Check if warning has been accepted
+  useEffect(() => {
+    const warningSeen = localStorage.getItem("void_warning_accepted")
+    if (warningSeen === "true") {
+      setWarningAccepted(true)
+    } else if (warningAccepted === null) {
+      setWarningAccepted(false)
+    }
+  }, [warningAccepted])
+
   // Expose global reset function for console access
   useEffect(() => {
     (window as any).resetIntro = () => {
       localStorage.removeItem("void_intro_seen")
+      localStorage.removeItem("void_warning_accepted")
       setIntroComplete(false)
+      setWarningAccepted(false)
       setGameStarted(false)
-      console.log("🔄 Intro reset! Refresh the page to see the intro sequence again.")
+      console.log("🔄 Intro reset! Refresh the page to see the warning and intro sequence again.")
     }
     console.log("💡 TIP: Type resetIntro() in console to restart intro sequence")
   }, [])
@@ -366,9 +380,11 @@ export default function VOIDMetaverse() {
       if ((e.key === "r" || e.key === "R") && e.shiftKey) {
         e.preventDefault()
         localStorage.removeItem("void_intro_seen")
+        localStorage.removeItem("void_warning_accepted")
         setIntroComplete(false)
+        setWarningAccepted(false)
         setGameStarted(false)
-        console.log("🔄 Intro reset! Refresh page to see intro sequence again.")
+        console.log("🔄 Intro reset! Refresh page to see warning and intro sequence again.")
       }
     }
 
@@ -570,7 +586,18 @@ export default function VOIDMetaverse() {
     >
       <CRTOverlay enabled={crtEnabled} />
 
-      {introComplete === false && <WelcomeScreen onComplete={() => setIntroComplete(true)} />}
+      {warningAccepted === false && (
+        <PhotosensitivityWarning
+          onAccept={() => {
+            localStorage.setItem("void_warning_accepted", "true")
+            setWarningAccepted(true)
+          }}
+        />
+      )}
+
+      {warningAccepted === true && introComplete === false && (
+        <WelcomeScreen onComplete={() => setIntroComplete(true)} />
+      )}
 
       {introComplete === true && !userProfile && <UserProfileSetup onComplete={handleProfileComplete} />}
 
@@ -1106,7 +1133,9 @@ export default function VOIDMetaverse() {
             <button
               onClick={() => { 
                 localStorage.removeItem("void_intro_seen");
+                localStorage.removeItem("void_warning_accepted");
                 setIntroComplete(false);
+                setWarningAccepted(false);
                 setGameStarted(false);
                 setBladeNavOpen(false);
               }}
