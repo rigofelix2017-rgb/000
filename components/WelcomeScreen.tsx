@@ -16,9 +16,12 @@ export function WelcomeScreen({ onComplete }: WelcomeScreenProps) {
   const [showCursor, setShowCursor] = useState(true)
   const [bootText, setBootText] = useState("")
   const [idleLoop, setIdleLoop] = useState(false)
+  const [userInput, setUserInput] = useState("")
+  const [inputError, setInputError] = useState(false)
   const audioContextRef = useRef<AudioContext | null>(null)
   const oscillatorRef = useRef<OscillatorNode | null>(null)
   const gainNodeRef = useRef<GainNode | null>(null)
+  const inputRef = useRef<HTMLInputElement>(null)
   const { play } = useAudioEngine()
 
   // Full boot text
@@ -63,6 +66,10 @@ export function WelcomeScreen({ onComplete }: WelcomeScreenProps) {
       setTimeout(() => {
         setPhase("invitation")
         play(AudioEvents.INTRO_WHISPER)
+        // Focus input field
+        setTimeout(() => {
+          inputRef.current?.focus()
+        }, 1000)
       }, 7000)
     )
 
@@ -114,11 +121,12 @@ export function WelcomeScreen({ onComplete }: WelcomeScreenProps) {
 
   // Handle user input
   const handleEnter = () => {
-    if (phase === "invitation" || idleLoop) {
+    const input = userInput.trim().toUpperCase()
+    const validCommands = ["ENTER THE VOID", "I ACCEPT", "ENTER"]
+    
+    if (phase === "invitation" && validCommands.includes(input)) {
       setPhase("entry")
       stopSubBass()
-
-      // Play metallic slam sound
       playTransitionSound()
 
       // Complete after transition
@@ -127,6 +135,24 @@ export function WelcomeScreen({ onComplete }: WelcomeScreenProps) {
         localStorage.setItem("void_intro_seen", "true")
         onComplete()
       }, 2000)
+    } else if (phase === "invitation") {
+      // Wrong command - shake effect
+      setInputError(true)
+      play(AudioEvents.UI_ERROR)
+      setTimeout(() => setInputError(false), 500)
+    }
+  }
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setUserInput(e.target.value)
+    if (e.target.value.length > 0) {
+      play(AudioEvents.INTRO_BOOT_BEEP)
+    }
+  }
+
+  const handleInputKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === "Enter") {
+      handleEnter()
     }
   }
 
@@ -138,19 +164,31 @@ export function WelcomeScreen({ onComplete }: WelcomeScreenProps) {
   // Keyboard listener
   useEffect(() => {
     const handleKeyPress = (e: KeyboardEvent) => {
+      // Allow typing in input field during invitation phase
+      if (phase === "invitation") {
+        return // Input field handles this
+      }
+      
+      // For other phases, allow skip with Enter/Space
       if (e.key === "Enter" || e.key === " ") {
-        handleEnter()
+        if (phase === "boot" || phase === "warning") {
+          // Skip to invitation
+          setPhase("invitation")
+          play(AudioEvents.INTRO_WHISPER)
+          setTimeout(() => {
+            inputRef.current?.focus()
+          }, 100)
+        }
       }
     }
 
     window.addEventListener("keydown", handleKeyPress)
     return () => window.removeEventListener("keydown", handleKeyPress)
-  }, [phase, idleLoop])
+  }, [phase])
 
   return (
     <div
-      className="fixed inset-0 z-[9999] flex items-center justify-center bg-black overflow-hidden cursor-pointer"
-      onClick={handleEnter}
+      className="fixed inset-0 z-[9999] flex items-center justify-center bg-black overflow-hidden"
     >
       {/* Film grain overlay */}
       <div className="absolute inset-0 opacity-10 pointer-events-none">
@@ -326,24 +364,60 @@ export function WelcomeScreen({ onComplete }: WelcomeScreenProps) {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 2, duration: 1 }}
+              className="space-y-6"
             >
               <p className="font-mono text-xl md:text-2xl text-[#d6d8df] mb-4 tracking-widest">
                 WELCOME TO THE VOID.
               </p>
-              <motion.p
-                animate={{
-                  opacity: [0.5, 1, 0.5],
-                }}
-                transition={{
-                  duration: 1.5,
-                  repeat: Infinity,
-                  ease: "easeInOut",
-                }}
-                className="font-mono text-lg text-[#00f0ff] tracking-wider"
-              >
-                PRESS ENTER TO SEE
-                {showCursor && <span className="ml-2 animate-pulse">_</span>}
-              </motion.p>
+              
+              {/* Command input */}
+              <div className="max-w-md mx-auto">
+                <p className="font-mono text-sm text-[#00f0ff]/60 mb-2 tracking-wider">
+                  TYPE COMMAND TO PROCEED:
+                </p>
+                <motion.div
+                  animate={inputError ? {
+                    x: [-10, 10, -10, 10, 0],
+                  } : {}}
+                  transition={{ duration: 0.4 }}
+                >
+                  <input
+                    ref={inputRef}
+                    type="text"
+                    value={userInput}
+                    onChange={handleInputChange}
+                    onKeyDown={handleInputKeyDown}
+                    placeholder="ENTER THE VOID"
+                    className="w-full px-4 py-3 bg-black/80 border-2 border-[#00f0ff]/30 text-[#00f0ff] font-mono text-lg tracking-widest uppercase placeholder:text-[#00f0ff]/20 focus:border-[#00f0ff] focus:outline-none focus:shadow-[0_0_20px_rgba(0,240,255,0.3)] transition-all"
+                    style={{
+                      textShadow: inputError ? '0 0 10px rgba(255, 0, 50, 0.8)' : '0 0 10px rgba(0, 240, 255, 0.5)',
+                      borderColor: inputError ? '#ff0032' : undefined,
+                    }}
+                    maxLength={20}
+                    autoComplete="off"
+                    autoCorrect="off"
+                    autoCapitalize="off"
+                    spellCheck="false"
+                  />
+                </motion.div>
+                <motion.p
+                  animate={{
+                    opacity: [0.5, 1, 0.5],
+                  }}
+                  transition={{
+                    duration: 1.5,
+                    repeat: Infinity,
+                    ease: "easeInOut",
+                  }}
+                  className="font-mono text-xs text-[#00f0ff]/40 mt-2 tracking-wider text-center"
+                >
+                  {inputError ? (
+                    <span className="text-[#ff0032]">INVALID COMMAND</span>
+                  ) : (
+                    <>ACCEPTED: "ENTER THE VOID" • "I ACCEPT" • "ENTER"</>
+                  )}
+                </motion.p>
+              </div>
             </motion.div>
 
             {/* Whisper text (idle loop) */}
